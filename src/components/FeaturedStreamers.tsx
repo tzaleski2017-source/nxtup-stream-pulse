@@ -1,41 +1,34 @@
+import { useState, useEffect } from "react";
 import { Star, TrendingUp, Users, Eye } from "lucide-react";
+import { Streamer } from "@/types";
+import { streamersApi, analytics } from "@/services/api";
 
 const FeaturedStreamers = () => {
-  const streamers = [
-    {
-      id: 1,
-      name: "PixelNinja",
-      image: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop&crop=face",
-      bio: "Master of indie games and speedruns",
-      bioSecond: "Known for incredible reaction times",
-      rating: 87,
-      followers: "45.2K",
-      avgViewers: "2.1K",
-      growth: "+340%"
-    },
-    {
-      id: 2,
-      name: "CosmicGamer",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
-      bio: "Space games and simulation expert",
-      bioSecond: "Building the ultimate gaming setup",
-      rating: 92,
-      followers: "67.8K",
-      avgViewers: "3.4K",
-      growth: "+280%"
-    },
-    {
-      id: 3,
-      name: "NeonQueen",
-      image: "https://images.unsplash.com/photo-1494790108755-2616c6d12e04?w=400&h=400&fit=crop&crop=face",
-      bio: "Competitive FPS with killer style",
-      bioSecond: "Rising esports phenomenon",
-      rating: 95,
-      followers: "89.1K",
-      avgViewers: "4.7K",
-      growth: "+425%"
-    }
-  ];
+  const [streamers, setStreamers] = useState<Streamer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadStreamers = async () => {
+      try {
+        const data = await streamersApi.getFeatured();
+        setStreamers(data);
+        analytics.track('featured_streamers_loaded', { count: data.length });
+      } catch (error) {
+        console.error('Failed to load streamers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStreamers();
+  }, []);
+
+  const handleStreamerClick = (streamer: Streamer) => {
+    analytics.track('streamer_card_clicked', {
+      streamer_id: streamer.id,
+      streamer_name: streamer.name,
+    });
+  };
 
   const renderStars = (rating: number) => {
     const stars = Math.floor(rating / 20);
@@ -64,10 +57,27 @@ const FeaturedStreamers = () => {
 
         {/* Streamers Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {streamers.map((streamer) => (
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-gradient-card rounded-2xl p-8 animate-pulse">
+                <div className="w-24 h-24 bg-muted rounded-full mx-auto mb-6" />
+                <div className="h-8 bg-muted rounded mb-4" />
+                <div className="h-4 bg-muted rounded mb-2" />
+                <div className="h-4 bg-muted rounded mb-6" />
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="h-16 bg-muted rounded" />
+                  <div className="h-16 bg-muted rounded" />
+                  <div className="h-16 bg-muted rounded" />
+                </div>
+              </div>
+            ))
+          ) : (
+            streamers.map((streamer) => (
             <div
               key={streamer.id}
-              className="group relative bg-gradient-card rounded-2xl p-8 card-glow hover:shadow-intense transition-all duration-500 gradient-border"
+              onClick={() => handleStreamerClick(streamer)}
+              className="group relative bg-gradient-card rounded-2xl p-8 card-glow hover:shadow-intense transition-all duration-500 gradient-border cursor-pointer"
             >
               {/* Profile Image */}
               <div className="relative mb-6 flex justify-center">
@@ -129,7 +139,8 @@ const FeaturedStreamers = () => {
                 </div>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </section>

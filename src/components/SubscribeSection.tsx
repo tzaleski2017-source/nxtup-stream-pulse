@@ -3,13 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, CheckCircle } from "lucide-react";
+import { subscriptionApi, analytics } from "@/services/api";
 
 const SubscribeSection = () => {
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
       toast({
@@ -20,18 +22,41 @@ const SubscribeSection = () => {
       return;
     }
 
-    // Simulate subscription
-    setIsSubmitted(true);
-    toast({
-      title: "Welcome to NXTUP!",
-      description: "You've successfully subscribed to the NXTUP Report.",
-    });
-    
-    // Reset after 3 seconds
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setEmail("");
-    }, 3000);
+    setIsLoading(true);
+
+    try {
+      const success = await subscriptionApi.subscribe({ email });
+      
+      if (success) {
+        setIsSubmitted(true);
+        analytics.track('newsletter_subscribed', { email });
+        toast({
+          title: "Welcome to NXTUP!",
+          description: "You've successfully subscribed to the NXTUP Report.",
+        });
+        
+        // Reset after 3 seconds
+        setTimeout(() => {
+          setIsSubmitted(false);
+          setEmail("");
+        }, 3000);
+      } else {
+        toast({
+          title: "Subscription failed",
+          description: "Something went wrong. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Subscription error:', error);
+      toast({
+        title: "Subscription failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isSubmitted) {
@@ -86,9 +111,10 @@ const SubscribeSection = () => {
               <Button
                 type="submit"
                 size="lg"
-                className="h-14 px-8 text-lg font-semibold bg-gradient-primary hover:opacity-90 border-0 shadow-glow hover:shadow-intense transition-all duration-300 sm:w-auto w-full"
+                disabled={isLoading}
+                className="h-14 px-8 text-lg font-semibold bg-gradient-primary hover:opacity-90 border-0 shadow-glow hover:shadow-intense transition-all duration-300 sm:w-auto w-full disabled:opacity-50"
               >
-                Subscribe
+                {isLoading ? "Subscribing..." : "Subscribe"}
               </Button>
             </div>
           </form>
